@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:vendaai/controllers/venda_controller.dart';
 import 'package:vendaai/views/estoque_view.dart';
 import 'package:vendaai/views/cadastrar_produto_view.dart';
@@ -15,6 +16,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   final _controller = VendaController();
+  DateTime _dataSelecionada = DateTime.now();
   double _total = 0;
   double _fiado = 0;
   double _pago = 0;
@@ -22,15 +24,15 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   void initState() {
     super.initState();
-    _carregarResumo();
+    _carregarResumo(_dataSelecionada);
   }
 
-  Future<void> _carregarResumo() async {
-    final resumo = await _controller.calcularResumoDoDia();
+  Future<void> _carregarResumo(DateTime dia) async {
+    final resumo = await _controller.calcularResumoParaDia(dia);
     setState(() {
       _total = resumo['total'] ?? 0;
       _fiado = resumo['fiado'] ?? 0;
-      _pago = resumo['pago'] ?? 0;
+      _pago  = resumo['pago']  ?? 0;
     });
   }
 
@@ -46,21 +48,12 @@ class _DashboardPageState extends State<DashboardPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  Image.asset('assets/logo.png', height: 32),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Venda.ai',
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Color(0xFF00AEEF),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Image.asset('assets/images/vendaai_logo.png', height: 48),
                 ],
               ),
             ),
 
-            // Destaques do dia
+            // Destaques do dia com seletor de data
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -71,21 +64,55 @@ class _DashboardPageState extends State<DashboardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Destaques de hoje',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Destaques de ${DateFormat('dd/MM/yyyy').format(_dataSelecionada)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.calendar_today, color: Colors.white),
+                        onPressed: () async {
+                          final DateTime? novaData = await showDatePicker(
+                            context: context,
+                            initialDate: _dataSelecionada,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now(),
+                            locale: const Locale('pt', 'BR'),
+                          );
+                          if (novaData != null && novaData != _dataSelecionada) {
+                            setState(() {
+                              _dataSelecionada = novaData;
+                            });
+                            await _carregarResumo(_dataSelecionada);
+                          }
+                        },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _InfoBox(value: 'R\$ ${_total.toStringAsFixed(2)}', label: 'Total vendido'),
-                      _InfoBox(value: 'R\$ ${_fiado.toStringAsFixed(2)}', label: 'Total fiado', color: Colors.orange),
-                      _InfoBox(value: 'R\$ ${_pago.toStringAsFixed(2)}', label: 'Total recebido', color: Colors.green),
+                      _InfoBox(
+                        value: 'R\$ ${_total.toStringAsFixed(2)}',
+                        label: 'Total vendido',
+                      ),
+                      _InfoBox(
+                        value: 'R\$ ${_fiado.toStringAsFixed(2)}',
+                        label: 'Total fiado',
+                        color: Colors.orange,
+                      ),
+                      _InfoBox(
+                        value: 'R\$ ${_pago.toStringAsFixed(2)}',
+                        label: 'Total recebido',
+                        color: Colors.green,
+                      ),
                     ],
                   ),
                 ],
@@ -110,7 +137,9 @@ class _DashboardPageState extends State<DashboardPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(builder: (_) => const NovaVendaView()),
-                            );
+                            ).then((_) {
+                              _carregarResumo(_dataSelecionada);
+                            });
                           },
                         ),
                       ),
@@ -169,7 +198,9 @@ class _DashboardPageState extends State<DashboardPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
                         padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       onPressed: () {
                         Navigator.push(
@@ -179,7 +210,10 @@ class _DashboardPageState extends State<DashboardPage> {
                       },
                       child: const Text(
                         'Histórico',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -198,7 +232,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   backgroundColor: Colors.orange,
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Ajuda ainda não implementada')),
+                      const SnackBar(
+                        content: Text('Ajuda ainda não implementada'),
+                      ),
                     );
                   },
                   child: const Icon(Icons.help_outline, color: Colors.white),
@@ -282,7 +318,10 @@ class _MenuButton extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
