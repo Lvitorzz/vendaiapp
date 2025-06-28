@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:vendaai/controllers/pagamento_controller.dart';
@@ -8,7 +9,6 @@ import 'package:vendaai/models/venda_model.dart';
 
 class DetalhesClienteView extends StatefulWidget {
   final ClienteModel cliente;
-
   const DetalhesClienteView({super.key, required this.cliente});
 
   @override
@@ -18,28 +18,107 @@ class DetalhesClienteView extends StatefulWidget {
 class _DetalhesClienteViewState extends State<DetalhesClienteView> {
   double _totalFiado = 0.0;
   double _totalPago = 0.0;
+  late final VendaController _vendaController;
+  final ScrollController _scrollController = ScrollController();
+  bool _showScrollButton = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _vendaController = VendaController();
+    _vendaController
+        .listarVendasPorCliente(widget.cliente.id!)
+        .listen(calcularTotais);
+    _scrollController.addListener(_scrollListener);
+  }
+
+  void _scrollListener() {
+    final offset = _scrollController.offset;
+    final max = _scrollController.position.maxScrollExtent;
+    if (offset <= 0) {
+      if (_showScrollButton) setState(() => _showScrollButton = false);
+    } else if (offset >= max) {
+      if (_showScrollButton) setState(() => _showScrollButton = false);
+    } else {
+      if (!_showScrollButton) setState(() => _showScrollButton = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   void calcularTotais(List<VendaModel> vendas) async {
-    final fiadas = vendas.where((v) => (v.tipo ?? '').toLowerCase().trim() == 'fiada').toList();
-    final totalFiado = fiadas.fold<double>(0.0, (soma, venda) {
-      return soma +
-          (venda.produtos.isNotEmpty
-              ? venda.produtos.fold(0.0, (s, p) => s + (p.preco * p.quantidade))
-              : venda.valor);
+    final fiadas = vendas.where((v) => v.foiFiada).toList();
+    final totalFiado = fiadas.fold<double>(0.0, (sum, v) {
+      final valor = v.produtos.isNotEmpty
+          ? v.produtos.fold(0.0, (s, p) => s + p.preco * p.quantidade)
+          : v.valor;
+      return sum + valor;
     });
-
-    final totalPago = await PagamentoController().calcularTotalPago(widget.cliente.id!);
-
+    final totalPago = await PagamentoController()
+        .calcularTotalPago(widget.cliente.id!);
     setState(() {
       _totalFiado = totalFiado;
       _totalPago = totalPago;
     });
   }
 
-  void abrirModalPagamento() {
-    final controller = TextEditingController();
-
+  void _abrirDetalhesVenda(VendaModel venda) {
+    final dataStr = DateFormat('dd/MM/yyyy – HH:mm').format(venda.data);
     showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Text('Venda – $dataStr', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(height: 12),
+                Text('Tipo: ${venda.foiFiada ? 'Fiada' : 'Paga'}'),
+                const SizedBox(height: 8),
+                const Text('Produtos:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...venda.produtos.map((p) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('${p.quantidade}x ${p.nome}'),
+                      Text('R\$ ${(p.preco * p.quantidade).toStringAsFixed(2)}'),
+                    ],
+                  ),
+                )),
+                const Divider(height: 24),
+                Text('Total: R\$ ${venda.valor.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                if (venda.observacao?.isNotEmpty ?? false) ...[
+                  const SizedBox(height: 8),
+                  const Text('Observação:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(venda.observacao!),
+                ],
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fechar')),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> abrirModalPagamento() async {
+    final controller = TextEditingController();
+    await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Efetuar pagamento'),
@@ -49,10 +128,7 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
           decoration: const InputDecoration(labelText: 'Valor pago'),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           ElevatedButton(
             onPressed: () async {
               final valor = double.tryParse(controller.text.replaceAll(',', '.'));
@@ -61,7 +137,9 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
                   clienteId: widget.cliente.id!,
                   valor: valor,
                 );
-                if (mounted) Navigator.pop(ctx);
+                Navigator.pop(ctx);
+                final vendas = await _vendaController.listarVendasPorCliente(widget.cliente.id!).first;
+                calcularTotais(vendas);
               }
             },
             child: const Text('Salvar'),
@@ -71,20 +149,22 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
     );
   }
 
-  void cobrarClienteNoWhatsapp() async {
+  Future<void> cobrarClienteNoWhatsapp() async {
     final numero = widget.cliente.whatsapp?.replaceAll(RegExp(r'\D'), '');
     if (numero == null || numero.isEmpty) return;
+    final restante = (_totalFiado - _totalPago).toStringAsFixed(2);
+    final msg = Uri.encodeComponent("Olá ${widget.cliente.nome}, seu saldo pendente é R\$ $restante.");
+    final uri = Uri.parse("https://wa.me/$numero?text=$msg");
+    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+    else ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Não foi possível abrir o WhatsApp.")));
+  }
 
-    final valorRestante = (_totalFiado - _totalPago).toStringAsFixed(2);
-    final mensagem = Uri.encodeComponent(
-        "Olá ${widget.cliente.nome}, estamos entrando em contato para lembrar que o valor pendente é de R\$ $valorRestante. Qualquer dúvida estamos à disposição.");
-    final url = Uri.parse("https://wa.me/$numero?text=$mensagem");
-
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Não foi possível abrir o WhatsApp.")),
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
       );
     }
   }
@@ -93,6 +173,13 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF26A6DF),
+      floatingActionButton: _showScrollButton
+          ? FloatingActionButton(
+        backgroundColor: Colors.white,
+        onPressed: _scrollToBottom,
+        child: const Icon(Icons.arrow_downward, color: Color(0xFF26A6DF)),
+      )
+          : null,
       body: SafeArea(
         child: Column(
           children: [
@@ -100,147 +187,137 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.arrow_back, color: Colors.white),
-                  ),
+                  GestureDetector(onTap: () => Navigator.pop(context), child: const Icon(Icons.arrow_back, color: Colors.white)),
                   const SizedBox(width: 12),
-                  const Text('Detalhes', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const Text('Detalhes do Cliente', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
-
-            // Card cliente
-            Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0E0E0),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nome: ${widget.cliente.nome}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                  Text('Data de cadastro: ${DateFormat('dd/MM/yyyy').format(widget.cliente.dataCadastro ?? DateTime.now())}'),
-                  Text('Telefone: ${widget.cliente.telefone ?? 'Não informado'}'),
-                  Text('WhatsApp: ${widget.cliente.whatsapp ?? 'Não informado'}'),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Total dívida: R\$ ${(_totalFiado - _totalPago).toStringAsFixed(2)}',
-                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-                  ),
-                  Text('Observação: ${widget.cliente.observacao ?? 'Nenhuma'}'),
-                ],
-              ),
-            ),
-
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8.0),
-              child: Text('Compras fiadas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-            ),
-
-            // Lista de fiadas
             Expanded(
-              child: StreamBuilder<List<VendaModel>>(
-                stream: VendaController().listarVendasPorCliente(widget.cliente.id!),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(
-                      child: Text('Nenhuma compra fiada.', style: TextStyle(color: Colors.white)),
-                    );
-                  }
-
-                  final todas = snapshot.data!;
-                  calcularTotais(todas);
-
-                  final fiadas = todas
-                      .where((v) => (v.tipo ?? '').toLowerCase().trim() == 'fiada')
-                      .toList();
-
-                  if (fiadas.isEmpty) {
-                    return const Center(
-                      child: Text('Nenhuma compra fiada.', style: TextStyle(color: Colors.white)),
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: fiadas.length,
-                    itemBuilder: (context, index) {
-                      final venda = fiadas[index];
-                      final dataFormatada = DateFormat('dd/MM/yyyy – HH:mm').format(venda.data);
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        color: const Color(0xFFE0E0E0),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Data: $dataFormatada', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 4),
-                              if (venda.produtos.isNotEmpty)
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: venda.produtos.map((p) {
-                                    return Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text('${p.quantidade}x ${p.nome}', style: const TextStyle(fontSize: 14)),
-                                        Text('R\$ ${(p.preco * p.quantidade).toStringAsFixed(2)}', style: const TextStyle(fontSize: 14)),
-                                      ],
-                                    );
-                                  }).toList(),
-                                )
-                              else
-                                Text('Valor: R\$ ${venda.valor.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14)),
-                              if (venda.observacao != null && venda.observacao!.isNotEmpty) ...[
-                                const SizedBox(height: 6),
-                                Text('Obs: ${venda.observacao!}', style: const TextStyle(fontStyle: FontStyle.italic)),
-                              ],
-                            ],
-                          ),
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 3)),
+                          ],
                         ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7ED321),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('Nome: ${widget.cliente.nome}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text('Cadastro: ${DateFormat('dd/MM/yyyy').format(widget.cliente.dataCadastro ?? DateTime.now())}'),
+                          const SizedBox(height: 4),
+                          Text('Telefone: ${widget.cliente.telefone ?? 'Não informado'}'),
+                          const SizedBox(height: 4),
+                          Text('WhatsApp: ${widget.cliente.whatsapp ?? 'Não informado'}'),
+                          const Divider(height: 20),
+                          const Text('DÍVIDAS EM ABERTO', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text('Total devedor: R\$ ${(_totalFiado - _totalPago).toStringAsFixed(2)}', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text('Observação: ${widget.cliente.observacao ?? 'Nenhuma'}'),
+                        ]),
                       ),
-                      onPressed: cobrarClienteNoWhatsapp,
-                      child: const Text('Cobrar cliente', style: TextStyle(fontSize: 18, color: Colors.white)),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7ED321),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: Text('Lista de Compras Fiadas', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    ),
+                    StreamBuilder<List<VendaModel>>(
+                      stream: _vendaController.listarVendasPorCliente(widget.cliente.id!),
+                      builder: (context, snapshot) {
+                        final fiadas = snapshot.data?.where((v) => v.foiFiada).toList() ?? [];
+                        if (fiadas.isEmpty) {
+                          return const Padding(padding: EdgeInsets.all(16), child: Text('Nenhuma compra fiada.', style: TextStyle(color: Colors.white)));
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Column(
+                            children: fiadas.map((venda) {
+                              final dataFmt = DateFormat('dd/MM/yyyy – HH:mm').format(venda.data);
+                              return Container(
+                                margin: const EdgeInsets.symmetric(vertical: 6),
+                                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [
+                                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+                                ]),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                                      Text('Data:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      Text(dataFmt, style: const TextStyle(color: Colors.black54)),
+                                    ]),
+                                    const SizedBox(height: 6),
+                                    ...venda.produtos.map((p) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('${p.quantidade}x ${p.nome}'), Text('R\$ ${(p.preco * p.quantidade).toStringAsFixed(2)}')])),
+                                    if (venda.produtos.isEmpty)
+                                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Valor:'), Text('R\$ ${venda.valor.toStringAsFixed(2)}')]),
+                                    if (venda.observacao?.isNotEmpty ?? false) ...[
+                                      const SizedBox(height: 6),
+                                      Text('Obs: ${venda.observacao!}', style: const TextStyle(fontStyle: FontStyle.italic)),
+                                    ],
+                                    const SizedBox(height: 12),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF26A6DF), padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                                        onPressed: () => _abrirDetalhesVenda(venda),
+                                        child: const Text('Detalhes', style: TextStyle(color: Colors.white)),
+                                      ),
+                                    ),
+                                  ]),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF7ED321),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: const FaIcon(FontAwesomeIcons.whatsapp, color: Colors.white),
+                              label: const Text('Cobrar cliente', style: TextStyle(fontSize: 18, color: Colors.white)),
+                              onPressed: cobrarClienteNoWhatsapp,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF7ED321),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: const Icon(Icons.payment, color: Colors.white),
+                              label: const Text('Efetuar pagamento', style: TextStyle(fontSize: 18, color: Colors.white)),
+                              onPressed: abrirModalPagamento,
+                            ),
+                          ),
+                        ],
                       ),
-                      onPressed: abrirModalPagamento,
-                      child: const Text('Efetuar pagamento', style: TextStyle(fontSize: 18, color: Colors.white)),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
           ],

@@ -24,25 +24,49 @@ class _HistoricoViewState extends State<HistoricoView> {
   }
 
   void _abrirDetalhes(VendaModel venda) {
+    final dataFormatada = DateFormat('dd/MM/yyyy – HH:mm').format(venda.data);
+
     showDialog(
       context: context,
       builder: (_) {
         return AlertDialog(
-          title: const Text('Detalhes da Venda'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text(
+            'Detalhes da Venda',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           content: SizedBox(
             width: double.maxFinite,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('ID: ${venda.id}'),
-                const SizedBox(height: 8),
-                const Text('Produtos:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                ...venda.produtos.map((p) => Text(
-                      '- ${p.quantidade}x ${p.nome} (R\$ ${(p.preco * p.quantidade).toStringAsFixed(2)})',
-                    )),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (venda.clienteNome != null && venda.clienteNome!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text('👤 Cliente: ${venda.clienteNome}'),
+                    ),
+                  Text('📅 Data: $dataFormatada'),
+                  const SizedBox(height: 8),
+                  Text('💰 Tipo: ${venda.foiPaga ? "Paga" : "Fiada"}'),
+                  const SizedBox(height: 12),
+                  const Text('🛒 Produtos:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  ...venda.produtos.map((p) => Text(
+                    '- ${p.quantidade}x ${p.nome} (R\$ ${(p.preco * p.quantidade).toStringAsFixed(2)})',
+                  )),
+                  const SizedBox(height: 12),
+                  Text(
+                    '💵 Total: R\$ ${venda.valor.toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  if (venda.observacao != null && venda.observacao!.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Text('📝 Observações:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(venda.observacao!),
+                  ]
+                ],
+              ),
             ),
           ),
           actions: [
@@ -183,29 +207,79 @@ class _HistoricoViewState extends State<HistoricoView> {
                               final data = DateFormat('dd/MM/yyyy – HH:mm').format(venda.data);
 
                               return Container(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.all(12),
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE0E0E0),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Data: $data', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    const SizedBox(height: 6),
-                                    Text('Valor: R\$ ${total.toStringAsFixed(2)}'),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          'Data da Venda:',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                        Text(
+                                          data,
+                                          style: const TextStyle(fontSize: 14, color: Colors.black54),
+                                        ),
+                                      ],
+                                    ),
                                     const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          'Valor total:',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                        Text(
+                                          'R\$ ${total.toStringAsFixed(2)}',
+                                          style: const TextStyle(fontSize: 14, color: Colors.black87),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
                                     Align(
                                       alignment: Alignment.centerRight,
                                       child: ElevatedButton(
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: const Color(0xFF26A6DF),
+                                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
                                         ),
                                         onPressed: () => _abrirDetalhes(venda),
-                                        child: const Text('Detalhes'),
+                                        child: const Text(
+                                          'Detalhes',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
                                       ),
-                                    )
+                                    ),
                                   ],
                                 ),
                               );

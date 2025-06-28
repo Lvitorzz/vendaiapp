@@ -2,8 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:vendaai/models/venda_model.dart';
 
 class VendaController {
-  final _firestore = FirebaseFirestore.instance;
-  final _collection = 'vendas';
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final String _collection = 'vendas';
 
   Future<void> adicionarVenda(VendaModel venda) async {
     // Adiciona a venda
@@ -17,13 +17,13 @@ class VendaController {
       if (docSnap.exists) {
         final dados = docSnap.data()!;
         final estoqueAtual = ((dados['estoque'] ?? 0) as num).toInt();
-
-
         final novoEstoque = estoqueAtual - item.quantidade;
         final estoqueFinal = novoEstoque < 0 ? 0 : novoEstoque;
 
         await docRef.update({'estoque': estoqueFinal});
-        print('✔ Estoque de "${item.nome}" atualizado: $estoqueAtual → $estoqueFinal');
+        // Em desenvolvimento, use um logger em vez de print():
+        print('✔ Estoque de "${item.nome}" atualizado: '
+            '$estoqueAtual → $estoqueFinal');
       }
     }
   }
@@ -33,8 +33,9 @@ class VendaController {
         .collection(_collection)
         .orderBy('data', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => VendaModel.fromFirestore(doc)).toList());
+        .map((snapshot) => snapshot.docs
+        .map((doc) => VendaModel.fromFirestore(doc))
+        .toList());
   }
 
   Stream<List<VendaModel>> listarVendasPorCliente(String clienteId) {
@@ -43,8 +44,9 @@ class VendaController {
         .where('clienteId', isEqualTo: clienteId)
         .orderBy('data', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => VendaModel.fromFirestore(doc)).toList());
+        .map((snapshot) => snapshot.docs
+        .map((doc) => VendaModel.fromFirestore(doc))
+        .toList());
   }
 
   Stream<List<VendaModel>> listarVendasFiadasPorCliente(String clienteId) {
@@ -55,65 +57,118 @@ class VendaController {
         .orderBy('data', descending: true)
         .snapshots()
         .map((snapshot) {
-          if (snapshot.docs.isEmpty) {
-            print('! Nenhuma venda FIADA para cliente $clienteId');
-          } else {
-            print('✔ ${snapshot.docs.length} venda(s) FIADAS para $clienteId');
-            for (var doc in snapshot.docs) {
-              final v = VendaModel.fromFirestore(doc);
-              print('→ ${v.id} | ${v.tipo} | R\$ ${v.valor}');
-            }
-          }
-
-          return snapshot.docs
-              .map((doc) => VendaModel.fromFirestore(doc))
-              .toList();
-        });
+      // Em desenvolvimento, use um logger em vez de print():
+      if (snapshot.docs.isEmpty) {
+        print('! Nenhuma venda FIADA para cliente $clienteId');
+      } else {
+        print(
+            '✔ ${snapshot.docs.length} venda(s) FIADAS para $clienteId');
+      }
+      return snapshot.docs
+          .map((doc) => VendaModel.fromFirestore(doc))
+          .toList();
+    });
   }
 
-  Future<Map<String, double>> calcularResumoDoDia() async {
-    final hoje = DateTime.now();
-    final inicioDoDia = DateTime(hoje.year, hoje.month, hoje.day);
-    final fimDoDia = DateTime(hoje.year, hoje.month, hoje.day, 23, 59, 59);
+  /// Calcula resumo (total, fiado e pago) para hoje.
+  Future<Map<String, double>> calcularResumoDoDia() {
+    return calcularResumoParaDia(DateTime.now());
+  }
 
-    final snapshot = await _firestore
-        .collection(_collection)
-        .where('data', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDoDia))
-        .where('data', isLessThanOrEqualTo: Timestamp.fromDate(fimDoDia))
-        .get();
+  /// Calcula total vendido, total fiado e total recebido para o [dia] especificado.
+  Future<Map<String, double>> calcularResumoParaDia(DateTime dia) async {
+    // Define início e fim do dia
+    final start = DateTime(dia.year, dia.month, dia.day);
+    final end = DateTime(dia.year, dia.month, dia.day, 23, 59, 59);
 
-    double total = 0;
-    double fiado = 0;
-    double pago = 0;
+    try {
+      final snapshot = await _firestore
+          .collection(_collection)
+          .where('data', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('data', isLessThanOrEqualTo:   Timestamp.fromDate(end))
+          .get();
 
-    for (var doc in snapshot.docs) {
-      final venda = VendaModel.fromFirestore(doc);
+      double total = 0, fiado = 0, pago = 0;
 
-      double valorCalculado = venda.produtos.isNotEmpty
-          ? venda.produtos.fold(0.0,
-              (sum, p) => sum + (p.preco * p.quantidade))
-          : venda.valor;
+      for (final doc in snapshot.docs) {
+        final venda = VendaModel.fromFirestore(doc);
+        final valor = venda.produtos.isNotEmpty
+            ? venda.produtos.fold<double>(
+            0.0, (sum, p) => sum + p.preco * p.quantidade)
+            : venda.valor;
 
-      total += valorCalculado;
-
-      final tipo = venda.tipo.trim().toLowerCase();
-      if (tipo == 'fiada') {
-        fiado += valorCalculado;
-      } else if (tipo == 'paga') {
-        pago += valorCalculado;
+        total += valor;
+        if (venda.foiFiada) {
+          fiado += valor;
+        } else {
+          pago += valor;
+        }
       }
 
-      print('→ Venda ${venda.id} | Tipo: ${venda.tipo} | Valor: $valorCalculado');
+      return {
+        'total': total,
+        'fiado': fiado,
+        'pago':  pago,
+      };
+    } catch (e, st) {
+      // Em produção, troque por um logger apropriado
+      print('Erro ao calcular resumo para $dia: $e\n$st');
+      return {
+        'total': 0,
+        'fiado': 0,
+        'pago':  0,
+      };
     }
-
-    print('Resumo do dia → Total: $total | Pago: $pago | Fiado: $fiado');
-
-    return {
-      'total': total,
-      'fiado': fiado,
-      'pago': pago,
-    };
   }
+
+  Future<Map<String, double>> calcularResumoEntrePeriodo(
+      DateTime dataInicio,
+      DateTime dataFim,
+      ) async {
+    // Normaliza para pegar o dia inteiro
+    final start = DateTime(
+      dataInicio.year,
+      dataInicio.month,
+      dataInicio.day,
+      0, 0, 0,
+    );
+    final end = DateTime(
+      dataFim.year,
+      dataFim.month,
+      dataFim.day,
+      23, 59, 59,
+    );
+
+    try {
+      final snapshot = await _firestore
+          .collection(_collection)
+          .where('data', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('data', isLessThanOrEqualTo:   Timestamp.fromDate(end))
+          .get();
+
+      double total = 0, fiado = 0, pago = 0;
+      for (final doc in snapshot.docs) {
+        final venda = VendaModel.fromFirestore(doc);
+        final valor = venda.produtos.isNotEmpty
+            ? venda.produtos.fold<double>(
+            0, (s, p) => s + p.preco * p.quantidade)
+            : venda.valor;
+
+        total += valor;
+        if (venda.foiFiada) {
+          fiado += valor;
+        } else {
+          pago += valor;
+        }
+      }
+
+      return {'total': total, 'fiado': fiado, 'pago': pago};
+    } catch (e, st) {
+      print('Erro ao calcular resumo no período: $e\n$st');
+      return {'total': 0, 'fiado': 0, 'pago': 0};
+    }
+  }
+
 
   Future<void> excluirVenda(String id) async {
     try {
