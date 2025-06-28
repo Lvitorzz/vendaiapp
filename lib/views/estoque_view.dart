@@ -218,7 +218,7 @@ class _EstoqueViewState extends State<EstoqueView> {
                                           ),
                                         );
                                       },
-                                      child: const Text('Editar'),
+                                      child: const Text('Editar', style: TextStyle(color: Colors.white),),
                                     ),
                                     const SizedBox(width: 8),
                                     ElevatedButton(
@@ -231,7 +231,7 @@ class _EstoqueViewState extends State<EstoqueView> {
                                       onPressed: () {
                                         _mostrarDetalhesProduto(produto);
                                       },
-                                      child: const Text('Detalhes'),
+                                      child: const Text('Detalhes', style: TextStyle(color: Colors.white),),
                                     ),
                                   ],
                                 ),

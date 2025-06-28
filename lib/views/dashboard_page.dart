@@ -6,6 +6,7 @@ import 'package:vendaai/views/cadastrar_produto_view.dart';
 import 'package:vendaai/views/clientes_view.dart';
 import 'package:vendaai/views/nova_venda_view.dart';
 import 'package:vendaai/views/historico_view.dart';
+import 'package:vendaai/views/resumo_periodo_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -38,6 +39,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final fmt = DateFormat('dd/MM/yyyy');
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -65,14 +67,16 @@ class _DashboardPageState extends State<DashboardPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Destaques de ${DateFormat('dd/MM/yyyy').format(_dataSelecionada)}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          'Destaques de ${fmt.format(_dataSelecionada)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       IconButton(
@@ -97,21 +101,28 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                   const SizedBox(height: 12),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _InfoBox(
-                        value: 'R\$ ${_total.toStringAsFixed(2)}',
-                        label: 'Total vendido',
+                      Expanded(
+                        child: _InfoBox(
+                          value: 'R\$ ${_total.toStringAsFixed(2)}',
+                          label: 'Total vendido',
+                        ),
                       ),
-                      _InfoBox(
-                        value: 'R\$ ${_fiado.toStringAsFixed(2)}',
-                        label: 'Total fiado',
-                        color: Colors.orange,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _InfoBox(
+                          value: 'R\$ ${_fiado.toStringAsFixed(2)}',
+                          label: 'Total fiado',
+                          color: Colors.orange,
+                        ),
                       ),
-                      _InfoBox(
-                        value: 'R\$ ${_pago.toStringAsFixed(2)}',
-                        label: 'Total recebido',
-                        color: Colors.green,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _InfoBox(
+                          value: 'R\$ ${_pago.toStringAsFixed(2)}',
+                          label: 'Total recebido',
+                          color: Colors.green,
+                        ),
                       ),
                     ],
                   ),
@@ -126,6 +137,7 @@ class _DashboardPageState extends State<DashboardPage> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
+                  // Primeira linha de botões
                   Row(
                     children: [
                       Expanded(
@@ -159,7 +171,10 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 12),
+
+                  // Segunda linha de botões
                   Row(
                     children: [
                       Expanded(
@@ -191,7 +206,10 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 20),
+
+                  // Botão Histórico
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -213,8 +231,36 @@ class _DashboardPageState extends State<DashboardPage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Botão Resumo por Período
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF26A6DF),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.timeline, color: Colors.white),
+                      label: const Text(
+                        'Resumo Período',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ResumoPeriodoPage()),
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -262,23 +308,27 @@ class _InfoBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 100,
       padding: const EdgeInsets.all(12),
+      constraints: const BoxConstraints(minHeight: 80),
       decoration: BoxDecoration(
         color: const Color(0xFF1A91C3),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             label,
             textAlign: TextAlign.center,

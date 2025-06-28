@@ -132,7 +132,12 @@ class _ClientesViewState extends State<ClientesView> {
                                     ),
                                   );
                                 },
-                                child: const Text('Editar'),
+                                child: const Text(
+                                  'Editar',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 8),
                               ElevatedButton(
@@ -148,7 +153,12 @@ class _ClientesViewState extends State<ClientesView> {
                                     ),
                                   );
                                 },
-                                child: const Text('Detalhes'),
+                                child: const Text(
+                                  'Detalhes',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -179,7 +189,11 @@ class _ClientesViewState extends State<ClientesView> {
                   ),
                   child: const Text(
                     'Cadastrar cliente',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),

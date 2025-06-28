@@ -121,11 +121,59 @@ class VendaController {
     }
   }
 
+  Future<Map<String, double>> calcularResumoEntrePeriodo(
+      DateTime dataInicio,
+      DateTime dataFim,
+      ) async {
+    // Normaliza para pegar o dia inteiro
+    final start = DateTime(
+      dataInicio.year,
+      dataInicio.month,
+      dataInicio.day,
+      0, 0, 0,
+    );
+    final end = DateTime(
+      dataFim.year,
+      dataFim.month,
+      dataFim.day,
+      23, 59, 59,
+    );
+
+    try {
+      final snapshot = await _firestore
+          .collection(_collection)
+          .where('data', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+          .where('data', isLessThanOrEqualTo:   Timestamp.fromDate(end))
+          .get();
+
+      double total = 0, fiado = 0, pago = 0;
+      for (final doc in snapshot.docs) {
+        final venda = VendaModel.fromFirestore(doc);
+        final valor = venda.produtos.isNotEmpty
+            ? venda.produtos.fold<double>(
+            0, (s, p) => s + p.preco * p.quantidade)
+            : venda.valor;
+
+        total += valor;
+        if (venda.foiFiada) {
+          fiado += valor;
+        } else {
+          pago += valor;
+        }
+      }
+
+      return {'total': total, 'fiado': fiado, 'pago': pago};
+    } catch (e, st) {
+      print('Erro ao calcular resumo no período: $e\n$st');
+      return {'total': 0, 'fiado': 0, 'pago': 0};
+    }
+  }
+
+
   Future<void> excluirVenda(String id) async {
     try {
       await _firestore.collection(_collection).doc(id).delete();
     } catch (e) {
-      // Propaga o erro para quem chamou
       rethrow;
     }
   }
