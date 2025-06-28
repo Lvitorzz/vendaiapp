@@ -21,7 +21,7 @@ dependencies:
   cloud_firestore: ^5.6.8
 
   # Atualizado para 0.19.0, compatível com flutter_localizations:
-  intl: ^0.19.0
+  intl: 0.20.2
 
   url_launcher: ^6.2.5
 

@@ -6,6 +6,8 @@ import 'package:vendaai/controllers/pagamento_controller.dart';
 import 'package:vendaai/controllers/venda_controller.dart';
 import 'package:vendaai/models/cliente_model.dart';
 import 'package:vendaai/models/venda_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/pagamento_model.dart';
 
 class DetalhesClienteView extends StatefulWidget {
   final ClienteModel cliente;
@@ -30,6 +32,99 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
         .listarVendasPorCliente(widget.cliente.id!)
         .listen(calcularTotais);
     _scrollController.addListener(_scrollListener);
+  }
+
+  void _abrirHistoricoPagamentos() {
+  showDialog(
+    context: context,
+    builder: (_) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: double.maxFinite,
+        height: 500,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: StreamBuilder<List<PagamentoModel>>(
+          stream: PagamentoController().listarPagamentosDoCliente(widget.cliente.id!),
+          builder: (context, snapshot) {
+            final pagamentos = snapshot.data ?? [];
+
+            if (pagamentos.isEmpty) {
+              return const Center(
+                child: Text('Nenhum pagamento registrado.'),
+              );
+            }
+
+            return Column(
+              children: [
+                const Text(
+                  'Todos os Pagamentos',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: pagamentos.length,
+                    itemBuilder: (_, index) {
+                      final pagamento = pagamentos[index];
+                      final dataFmt = DateFormat('dd/MM/yyyy – HH:mm').format(pagamento.data);
+
+                      return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 6),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Data:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Text(dataFmt, style: const TextStyle(color: Colors.black54)),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Valor:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                Text('R\$ ${NumberFormat.currency(locale: "pt_BR", symbol: "").format(pagamento.valor)}'),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Fechar'),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   void _scrollListener() {
@@ -280,6 +375,91 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
                         );
                       },
                     ),
+                    
+                    
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: Text(
+                        'Histórico de Pagamentos',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    StreamBuilder<List<PagamentoModel>>(
+                      stream: PagamentoController().listarPagamentosDoCliente(widget.cliente.id!),
+                      builder: (context, snapshot) {
+                        final pagamentos = snapshot.data ?? [];
+
+                        if (pagamentos.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Text(
+                              'Nenhum pagamento registrado.',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          );
+                        }
+
+                        // Mostra só os 3 mais recentes na view
+                        final ultimos = pagamentos.take(3).toList();
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          child: Column(
+                            children: [
+                              ...ultimos.map((pagamento) {
+                                final dataFmt = DateFormat('dd/MM/yyyy – HH:mm').format(pagamento.data);
+
+                                return Container(
+                                  margin: const EdgeInsets.symmetric(vertical: 6),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                                        const Text('Data:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                        Text(dataFmt, style: const TextStyle(color: Colors.black54)),
+                                      ]),
+                                      const SizedBox(height: 6),
+                                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                                        const Text('Valor:', style: TextStyle(fontWeight: FontWeight.bold)),
+                                        Text('R\$ ${NumberFormat.currency(locale: "pt_BR", symbol: "").format(pagamento.valor)}'),
+                                      ]),
+                                    ],
+                                  ),
+                                );
+                              }),
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: _abrirHistoricoPagamentos,
+                                  child: const Text(
+                                    'Ver todos os pagamentos',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    
                     const SizedBox(height: 16),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),

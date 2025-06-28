@@ -7,6 +7,7 @@ import 'package:vendaai/views/clientes_view.dart';
 import 'package:vendaai/views/nova_venda_view.dart';
 import 'package:vendaai/views/historico_view.dart';
 import 'package:vendaai/views/resumo_periodo_page.dart';
+import '../views/historico_pagamentos_view.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -227,7 +228,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         );
                       },
                       child: const Text(
-                        'Histórico',
+                        'Histórico de Vendas',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -237,6 +238,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   ),
 
+                  
                   const SizedBox(height: 12),
 
                   // Botão Resumo por Período
