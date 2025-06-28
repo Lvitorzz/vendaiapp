@@ -46,7 +46,6 @@ class _DashboardPageState extends State<DashboardPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Topo com logo
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -175,7 +174,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
                   const SizedBox(height: 12),
 
-                  // Segunda linha de botões
                   Row(
                     children: [
                       Expanded(
@@ -208,15 +206,14 @@ class _DashboardPageState extends State<DashboardPage> {
                     ],
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 14),
 
-                  // Botão Histórico
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -238,16 +235,43 @@ class _DashboardPageState extends State<DashboardPage> {
                     ),
                   ),
 
+                const SizedBox(height: 12),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const HistoricoPagamentosView()),
+                        );
+                      },
+                      child: const Text(
+                        'Histórico de Pagamentos',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                   
                   const SizedBox(height: 12),
 
-                  // Botão Resumo por Período
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF26A6DF),
-                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -271,7 +295,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
             const Spacer(),
 
-            // Botão de ajuda
             Align(
               alignment: Alignment.bottomRight,
               child: Padding(

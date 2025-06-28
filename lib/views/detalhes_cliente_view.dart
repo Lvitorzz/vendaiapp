@@ -80,7 +80,7 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withAlpha((0.05 * 255).round()), 
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -403,8 +403,8 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
                           );
                         }
 
-                        // Mostra só os 3 mais recentes na view
-                        final ultimos = pagamentos.take(3).toList();
+                        // Mostra só os 2 mais recentes na view
+                        final ultimos = pagamentos.take(2).toList();
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
