@@ -245,13 +245,26 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
   }
 
   Future<void> cobrarClienteNoWhatsapp() async {
-    final numero = widget.cliente.whatsapp?.replaceAll(RegExp(r'\D'), '');
-    if (numero == null || numero.isEmpty) return;
-    final restante = (_totalFiado - _totalPago).toStringAsFixed(2);
-    final msg = Uri.encodeComponent("Olá ${widget.cliente.nome}, seu saldo pendente é R\$ $restante.");
-    final uri = Uri.parse("https://wa.me/$numero?text=$msg");
-    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-    else ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Não foi possível abrir o WhatsApp.")));
+    final telefoneBruto = widget.cliente.whatsapp;
+    if (telefoneBruto == null || telefoneBruto.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('WhatsApp do cliente não informado.')),
+      );
+      return;
+    }
+
+    final numero = '55${telefoneBruto.replaceAll(RegExp(r'\D'), '')}';
+    final restante = (_totalFiado - _totalPago).toStringAsFixed(2).replaceAll('.', ',');
+    final mensagem = Uri.encodeComponent("Olá ${widget.cliente.nome}, seu saldo pendente é R\$ $restante.");
+    final uri = Uri.parse('whatsapp://send?phone=$numero&text=$mensagem');
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível abrir o WhatsApp.')),
+      );
+    }
   }
 
   void _scrollToBottom() {
