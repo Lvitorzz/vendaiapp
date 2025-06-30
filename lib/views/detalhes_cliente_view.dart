@@ -101,7 +101,7 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text('Valor:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text('R\$ ${NumberFormat.currency(locale: "pt_BR", symbol: "").format(pagamento.valor)}'),
+                                Text(NumberFormat.currency(locale: "pt_BR", symbol: "R\$").format(pagamento.valor)),
                               ],
                             ),
                           ],
@@ -187,12 +187,15 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('${p.quantidade}x ${p.nome}'),
-                      Text('R\$ ${(p.preco * p.quantidade).toStringAsFixed(2)}'),
+                      Text(NumberFormat.currency(locale: "pt_BR", symbol: "R\$").format(p.preco * p.quantidade)),
                     ],
                   ),
                 )),
                 const Divider(height: 24),
-                Text('Total: R\$ ${venda.valor.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  'Total: ${NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(venda.valor)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 if (venda.observacao?.isNotEmpty ?? false) ...[
                   const SizedBox(height: 8),
                   const Text('Observação:', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -254,8 +257,8 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
     }
 
     final numero = '55${telefoneBruto.replaceAll(RegExp(r'\D'), '')}';
-    final restante = (_totalFiado - _totalPago).toStringAsFixed(2).replaceAll('.', ',');
-    final mensagem = Uri.encodeComponent("Olá ${widget.cliente.nome}, seu saldo pendente é R\$ $restante.");
+    final restante = NumberFormat.currency(locale: "pt_BR", symbol: "R\$").format(_totalFiado - _totalPago);
+    final mensagem = Uri.encodeComponent("Olá ${widget.cliente.nome}, seu saldo pendente é $restante");
     final uri = Uri.parse('whatsapp://send?phone=$numero&text=$mensagem');
 
     if (await canLaunchUrl(uri)) {
@@ -364,9 +367,15 @@ class _DetalhesClienteViewState extends State<DetalhesClienteView> {
                                       Text(dataFmt, style: const TextStyle(color: Colors.black54)),
                                     ]),
                                     const SizedBox(height: 6),
-                                    ...venda.produtos.map((p) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('${p.quantidade}x ${p.nome}'), Text('R\$ ${(p.preco * p.quantidade).toStringAsFixed(2)}')])),
+                                    ...venda.produtos.map((p) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('${p.quantidade}x ${p.nome}'), Text(NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(p.preco * p.quantidade))])),
                                     if (venda.produtos.isEmpty)
-                                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Valor:'), Text('R\$ ${venda.valor.toStringAsFixed(2)}')]),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Text('Valor:'),
+                                          Text(NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(venda.valor)),
+                                        ],
+                                      ),
                                     if (venda.observacao?.isNotEmpty ?? false) ...[
                                       const SizedBox(height: 6),
                                       Text('Obs: ${venda.observacao!}', style: const TextStyle(fontStyle: FontStyle.italic)),
