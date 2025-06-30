@@ -339,7 +339,7 @@ class _NovaVendaViewState extends State<NovaVendaView> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: _finalizarVenda,
-                    child: const Text('Finalizar venda', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    child: const Text('Finalizar venda', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
                 ),
               ],
