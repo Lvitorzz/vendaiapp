@@ -57,7 +57,7 @@ class _HistoricoViewState extends State<HistoricoView> {
                   )),
                   const SizedBox(height: 12),
                   Text(
-                    '💵 Total: R\$ ${venda.valor.toStringAsFixed(2)}',
+                    '💵 Total: ${NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(venda.valor)}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   if (venda.observacao != null && venda.observacao!.isNotEmpty) ...[
@@ -253,7 +253,7 @@ class _HistoricoViewState extends State<HistoricoView> {
                                           ),
                                         ),
                                         Text(
-                                          'R\$ ${total.toStringAsFixed(2)}',
+                                          NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(total),
                                           style: const TextStyle(fontSize: 14, color: Colors.black87),
                                         ),
                                       ],
