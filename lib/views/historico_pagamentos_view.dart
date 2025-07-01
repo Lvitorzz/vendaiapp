@@ -1,95 +1,88 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:vendaai/models/venda_model.dart';
-import 'package:vendaai/controllers/venda_controller.dart';
+import '../controllers/pagamento_controller.dart';
+import '../models/pagamento_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/cliente_model.dart';
 
-class HistoricoView extends StatefulWidget {
-  const HistoricoView({super.key});
+class HistoricoPagamentosView extends StatefulWidget {
+  const HistoricoPagamentosView({super.key});
 
   @override
-  State<HistoricoView> createState() => _HistoricoViewState();
+  State<HistoricoPagamentosView> createState() => _HistoricoPagamentosViewState();
 }
 
-class _HistoricoViewState extends State<HistoricoView> {
-  final VendaController _controller = VendaController();
-  String _filtro = 'todas';
+class _HistoricoPagamentosViewState extends State<HistoricoPagamentosView> {
+  final PagamentoController _controller = PagamentoController();
 
-  List<VendaModel> _filtrarVendas(List<VendaModel> vendas) {
-    if (_filtro == 'fiadas') {
-      return vendas.where((v) => v.tipo == 'fiada').toList();
-    } else if (_filtro == 'pagas') {
-      return vendas.where((v) => v.tipo == 'paga').toList();
-    }
-    return vendas;
-  }
-
-  void _abrirDetalhes(VendaModel venda) {
-    final dataFormatada = DateFormat('dd/MM/yyyy – HH:mm').format(venda.data);
+  void _abrirDetalhes(PagamentoModel pagamento) {
+    final dataFormatada = DateFormat('dd/MM/yyyy – HH:mm').format(pagamento.data);
 
     showDialog(
       context: context,
-      builder: (_) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text(
-            'Detalhes da Venda',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (venda.clienteNome != null && venda.clienteNome!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text('👤 Cliente: ${venda.clienteNome}'),
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFFF5F5F5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Detalhes do Pagamento',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('clientes')
+                .doc(pagamento.clienteId)
+                .get(),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              // fallback para o ID
+              String nomeCliente = pagamento.clienteId;
+              if (snap.hasData && snap.data!.exists) {
+                try {
+                  final cliente = ClienteModel.fromFirestore(snap.data!);
+                  nomeCliente = cliente.nome;
+                } catch (_) { /* ignora se falhar */ }
+              }
+
+              return SingleChildScrollView(
+                child: ListBody(
+                  children: [
+                    Text(
+                      '👤 Cliente: $nomeCliente',
+                      style: const TextStyle(fontSize: 16),
                     ),
-                  Text('📅 Data: $dataFormatada'),
-                  const SizedBox(height: 8),
-                  Text('💰 Tipo: ${venda.foiPaga ? "Paga" : "Fiada"}'),
-                  const SizedBox(height: 12),
-                  const Text('🛒 Produtos:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  ...venda.produtos.map((p) => Text(
-                    '- ${p.quantidade}x ${p.nome} (R\$ ${(p.preco * p.quantidade).toStringAsFixed(2)})',
-                  )),
-                  const SizedBox(height: 12),
-                  Text(
-                    '💵 Total: ${NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(venda.valor)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  if (venda.observacao != null && venda.observacao!.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    const Text('📝 Observações:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text(venda.observacao!),
-                  ]
-                ],
-              ),
-            ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '📅 Data: $dataFormatada',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '💵 Valor: ${NumberFormat.simpleCurrency(locale: "pt_BR").format(pagamento.valor)}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Fechar'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                await _controller.excluirVenda(venda.id!);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Venda excluída com sucesso')),
-                );
-              },
-              child: const Text(
-                'Excluir',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -102,6 +95,7 @@ class _HistoricoViewState extends State<HistoricoView> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
+              // Cabeçalho
               Row(
                 children: [
                   GestureDetector(
@@ -110,7 +104,7 @@ class _HistoricoViewState extends State<HistoricoView> {
                   ),
                   const SizedBox(width: 12),
                   const Text(
-                    'Histórico',
+                    'Histórico de Pagamentos',
                     style: TextStyle(
                       fontSize: 20,
                       color: Colors.white,
@@ -120,47 +114,11 @@ class _HistoricoViewState extends State<HistoricoView> {
                 ],
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: _filtro == 'fiadas' ? Colors.white24 : Colors.transparent,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.white),
-                      ),
-                      child: TextButton(
-                        onPressed: () => setState(() {
-                          _filtro = _filtro == 'fiadas' ? 'todas' : 'fiadas';
-                        }),
-                        child: const Text('Fiadas', style: TextStyle(color: Colors.white)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: _filtro == 'pagas' ? Colors.white24 : Colors.transparent,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.white),
-                      ),
-                      child: TextButton(
-                        onPressed: () => setState(() {
-                          _filtro = _filtro == 'pagas' ? 'todas' : 'pagas';
-                        }),
-                        child: const Text('Pagas', style: TextStyle(color: Colors.white)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
+
+              // Lista de pagamentos
               Expanded(
-                child: StreamBuilder<List<VendaModel>>(
-                  stream: _controller.listarVendas(),
+                child: StreamBuilder<List<PagamentoModel>>(
+                  stream: _controller.listarTodosPagamentos(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(
@@ -168,13 +126,16 @@ class _HistoricoViewState extends State<HistoricoView> {
                       );
                     }
 
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    final pagamentos = snapshot.data ?? [];
+
+                    if (pagamentos.isEmpty) {
                       return const Center(
-                        child: Text('Nenhuma venda encontrada.', style: TextStyle(color: Colors.white)),
+                        child: Text(
+                          'Nenhum pagamento encontrado.',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       );
                     }
-
-                    final vendasFiltradas = _filtrarVendas(snapshot.data!);
 
                     return Column(
                       children: [
@@ -186,7 +147,7 @@ class _HistoricoViewState extends State<HistoricoView> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${vendasFiltradas.length} Vendas listadas',
+                            '${pagamentos.length} pagamentos listados',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: Colors.orange,
@@ -198,13 +159,10 @@ class _HistoricoViewState extends State<HistoricoView> {
                         const SizedBox(height: 12),
                         Expanded(
                           child: ListView.builder(
-                            itemCount: vendasFiltradas.length,
+                            itemCount: pagamentos.length,
                             itemBuilder: (_, index) {
-                              final venda = vendasFiltradas[index];
-                              final total = venda.produtos.isNotEmpty
-                                  ? venda.produtos.fold(0.0, (sum, p) => sum + (p.preco * p.quantidade))
-                                  : venda.valor;
-                              final data = DateFormat('dd/MM/yyyy – HH:mm').format(venda.data);
+                              final p = pagamentos[index];
+                              final data = DateFormat('dd/MM/yyyy – HH:mm').format(p.data);
 
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
@@ -227,7 +185,7 @@ class _HistoricoViewState extends State<HistoricoView> {
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         const Text(
-                                          'Data da Venda:',
+                                          'Data do Pagamento:',
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
@@ -245,7 +203,7 @@ class _HistoricoViewState extends State<HistoricoView> {
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         const Text(
-                                          'Valor total:',
+                                          'Valor:',
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.bold,
@@ -253,7 +211,7 @@ class _HistoricoViewState extends State<HistoricoView> {
                                           ),
                                         ),
                                         Text(
-                                          NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(total),
+                                          NumberFormat.simpleCurrency(locale: 'pt_BR').format(p.valor),
                                           style: const TextStyle(fontSize: 14, color: Colors.black87),
                                         ),
                                       ],
@@ -269,7 +227,7 @@ class _HistoricoViewState extends State<HistoricoView> {
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                         ),
-                                        onPressed: () => _abrirDetalhes(venda),
+                                        onPressed: () => _abrirDetalhes(p),
                                         child: const Text(
                                           'Detalhes',
                                           style: TextStyle(

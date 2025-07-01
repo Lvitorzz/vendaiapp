@@ -196,8 +196,11 @@ class _ResumoPeriodoPageState extends State<ResumoPeriodoPage> {
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
                         onPressed: _buscarResumo,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Atualizar'),
+                        icon: const Icon(Icons.refresh, color: Colors.white),
+                        label: const Text(
+                          'Atualizar',
+                          style: TextStyle(color: Colors.white),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange,
                           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
@@ -243,9 +246,9 @@ class _ResumoCard extends StatelessWidget {
               Icon(icon, size: 32, color: color),
               const SizedBox(height: 8),
               Text(
-                'R\$ ${value.toStringAsFixed(2)}',
+                NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(value),
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),

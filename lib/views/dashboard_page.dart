@@ -7,6 +7,8 @@ import 'package:vendaai/views/clientes_view.dart';
 import 'package:vendaai/views/nova_venda_view.dart';
 import 'package:vendaai/views/historico_view.dart';
 import 'package:vendaai/views/resumo_periodo_page.dart';
+import '../views/historico_pagamentos_view.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -45,7 +47,6 @@ class _DashboardPageState extends State<DashboardPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Topo com logo
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -54,8 +55,6 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
-
-            // Destaques do dia com seletor de data
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -129,15 +128,11 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 16),
-
-            // Botões principais
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  // Primeira linha de botões
                   Row(
                     children: [
                       Expanded(
@@ -171,10 +166,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
-
-                  // Segunda linha de botões
                   Row(
                     children: [
                       Expanded(
@@ -206,16 +198,13 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // Botão Histórico
+                  const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -227,7 +216,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         );
                       },
                       child: const Text(
-                        'Histórico',
+                        'Histórico de Vendas',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -236,16 +225,40 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
-                  // Botão Resumo por Período
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const HistoricoPagamentosView()),
+                        );
+                      },
+                      child: const Text(
+                        'Histórico de Pagamentos',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF26A6DF),
-                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -266,22 +279,22 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
-
             const Spacer(),
-
-            // Botão de ajuda
             Align(
               alignment: Alignment.bottomRight,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: FloatingActionButton(
                   backgroundColor: Colors.orange,
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Ajuda ainda não implementada'),
-                      ),
-                    );
+                  onPressed: () async {
+                    final uri = Uri.parse('https://seashell-ape-627285.hostingersite.com/');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Não foi possível abrir o link')),
+                      );
+                    }
                   },
                   child: const Icon(Icons.help_outline, color: Colors.white),
                 ),

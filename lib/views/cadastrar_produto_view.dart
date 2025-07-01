@@ -169,7 +169,7 @@ class _CadastrarProdutoViewState extends State<CadastrarProdutoView> {
                         onPressed: _salvarProduto,
                         child: const Text(
                           'Cadastrar',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                       ),
                     ),

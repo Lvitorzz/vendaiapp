@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/pagamento_model.dart';
 
 class PagamentoController {
   final _firestore = FirebaseFirestore.instance;
@@ -56,4 +57,27 @@ class PagamentoController {
   Future<void> excluirPagamento(String pagamentoId) async {
     await _firestore.collection(_collection).doc(pagamentoId).delete();
   }
+
+  /// Lista todos os pagamentos do sistema em ordem de data (mais recente primeiro)
+  Stream<List<PagamentoModel>> listarTodosPagamentos() {
+    return _firestore
+        .collection(_collection)
+        .orderBy('data', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => PagamentoModel.fromFirestore(doc))
+            .toList());
+  }
+
+  Stream<List<PagamentoModel>> listarPagamentosDoCliente(String clienteId) {
+  return _firestore
+      .collection(_collection)
+      .where('clienteId', isEqualTo: clienteId)
+      .orderBy('data', descending: true)
+      .snapshots()
+      .map((snapshot) =>
+          snapshot.docs.map((doc) => PagamentoModel.fromFirestore(doc)).toList());
+  }
+  
+
 }
