@@ -15,20 +15,22 @@ dependencies:
     sdk: flutter
 
   font_awesome_flutter: ^10.4.0
-
   cupertino_icons: ^1.0.8
   firebase_core: ^3.13.1
   cloud_firestore: ^5.6.8
-
-  # Atualizado para 0.19.0, compatível com flutter_localizations:
-  intl: 0.20.2
-
+  intl: 0.19.0
   url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icone.png"
 
 flutter:
   uses-material-design: true

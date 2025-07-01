@@ -8,6 +8,7 @@ import 'package:vendaai/views/nova_venda_view.dart';
 import 'package:vendaai/views/historico_view.dart';
 import 'package:vendaai/views/resumo_periodo_page.dart';
 import '../views/historico_pagamentos_view.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -54,8 +55,6 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
-
-            // Destaques do dia com seletor de data
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -129,15 +128,11 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 16),
-
-            // Botões principais
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  // Primeira linha de botões
                   Row(
                     children: [
                       Expanded(
@@ -171,9 +166,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 12),
-
                   Row(
                     children: [
                       Expanded(
@@ -205,9 +198,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 14),
-
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -234,9 +225,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ),
                   ),
-
-                const SizedBox(height: 12),
-
+                  const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -263,9 +252,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       ),
                     ),
                   ),
-                  
                   const SizedBox(height: 12),
-
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -292,21 +279,22 @@ class _DashboardPageState extends State<DashboardPage> {
                 ],
               ),
             ),
-
             const Spacer(),
-
             Align(
               alignment: Alignment.bottomRight,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: FloatingActionButton(
                   backgroundColor: Colors.orange,
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Ajuda ainda não implementada'),
-                      ),
-                    );
+                  onPressed: () async {
+                    final uri = Uri.parse('https://seashell-ape-627285.hostingersite.com/');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Não foi possível abrir o link')),
+                      );
+                    }
                   },
                   child: const Icon(Icons.help_outline, color: Colors.white),
                 ),

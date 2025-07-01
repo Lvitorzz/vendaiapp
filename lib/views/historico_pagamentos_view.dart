@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../controllers/pagamento_controller.dart';
 import '../models/pagamento_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/cliente_model.dart';
 
 class HistoricoPagamentosView extends StatefulWidget {
   const HistoricoPagamentosView({super.key});
@@ -13,52 +15,74 @@ class HistoricoPagamentosView extends StatefulWidget {
 class _HistoricoPagamentosViewState extends State<HistoricoPagamentosView> {
   final PagamentoController _controller = PagamentoController();
 
-    void _abrirDetalhes(PagamentoModel pagamento) {
+  void _abrirDetalhes(PagamentoModel pagamento) {
     final dataFormatada = DateFormat('dd/MM/yyyy – HH:mm').format(pagamento.data);
 
     showDialog(
       context: context,
-      builder: (_) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFFF5F5F5), 
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            children: const [
-              Expanded(
-                child: Text(
-                  'Detalhes do Pagamento',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFFF5F5F5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Detalhes do Pagamento',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('clientes')
+                .doc(pagamento.clienteId)
+                .get(),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              // fallback para o ID
+              String nomeCliente = pagamento.clienteId;
+              if (snap.hasData && snap.data!.exists) {
+                try {
+                  final cliente = ClienteModel.fromFirestore(snap.data!);
+                  nomeCliente = cliente.nome;
+                } catch (_) { /* ignora se falhar */ }
+              }
+
+              return SingleChildScrollView(
+                child: ListBody(
+                  children: [
+                    Text(
+                      '👤 Cliente: $nomeCliente',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '📅 Data: $dataFormatada',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '💵 Valor: ${NumberFormat.simpleCurrency(locale: "pt_BR").format(pagamento.valor)}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              );
+            },
           ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('👤 Cliente: ${pagamento.clienteId}'),
-                const SizedBox(height: 8),
-                Text('📅 Data: $dataFormatada'),
-                const SizedBox(height: 8),
-                Text(
-                  '💵 Valor: ${NumberFormat.simpleCurrency(locale: "pt_BR").format(pagamento.valor)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fechar'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Fechar'),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
     );
   }
 
